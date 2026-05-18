@@ -1,8 +1,4 @@
 #![allow(dead_code)]
-
-// ["SET", "count", "0"]
-
-
 use std::{collections::HashMap, str};
 
 #[derive(Debug)]
@@ -46,9 +42,6 @@ impl Lexer {
     }
 
     pub fn tokenize(&mut self) {
-        // let toks: Vec<String> = self.src.split([' ', '\n']).map(String::from).collect();
-        // dbg!(&self.get_token()[..] == "SET");
-        // return;
         loop {
             match self.peek_token() {
                 None => break,
@@ -70,7 +63,7 @@ impl Lexer {
                             let inst = Instruction::FLUSHALL;
                             self.instructions.push(inst);
                         }
-                        default => {}
+                        _ => {}
                     }
                 }
             }
@@ -89,23 +82,30 @@ impl Interpreter {
         }
     }
 
-    pub fn interprete(&mut self, ht: &mut HashMap<String, String>) {
+    pub fn interprete(&mut self, ht: &mut HashMap<String, String>) -> String {
         for inst in &self.lexer.instructions {
             match inst {
                 Instruction::GET(key) => {
-                    dbg!(&ht.get(key));
+                    if let Some(ret) =  ht.get(key) {
+                        return ret.clone();
+                    } else {
+                        panic!();
+                    };
                 }
                 Instruction::SET(key, val) => {
                     ht.insert(key.clone(), val.clone());
+                    return "OK".to_string();
                 }
                 Instruction::KEYS => {
-                    dbg!(&ht);
+                    return format!("{:?}", &ht);
                 }
                 Instruction::FLUSHALL => {
                     ht.clear();
+                    return "OK".to_string();
                 }
             }
         }
+        "ERROR: Something went wrong!".to_string()
     }
 }
 

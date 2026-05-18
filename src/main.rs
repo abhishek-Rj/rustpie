@@ -3,7 +3,6 @@ use parser::parser::{Interpreter};
 use std::{collections::HashMap, io::{Read, Write}, net::{TcpListener, TcpStream}};
 
 struct Server {
-    // listener: TcpListener,
     db: HashMap<String, String>,
 }
 
@@ -14,6 +13,7 @@ impl Server {
         }
     }
     pub fn handle_client(&mut self, mut stream: TcpStream) -> std::io::Result<()> {
+        println!("INFO: Client connected. address: <{}>", &stream.peer_addr().unwrap());
         loop {
             let mut buffer = [0u8; 256];
             stream.write("> ".as_bytes())?;
@@ -25,8 +25,8 @@ impl Server {
 
             let mut interpreter = Interpreter::new(&res);
             interpreter.lexer.tokenize();
-            interpreter.interprete(&mut self.db);
-            stream.write("OK!\n".as_bytes())?;
+            let ret = interpreter.interprete(&mut self.db);
+            stream.write(format!("{ret}\n").as_bytes())?;
         }
         Ok(())
     }
@@ -34,7 +34,17 @@ impl Server {
 
 fn main() -> std::io::Result<()> {
     let mut server = Server::new();
-    let listener = TcpListener::bind("127.0.0.1:6969")?;
+    let addr = "127.0.0.1:6969";
+    let listener = match TcpListener::bind(addr) {
+        Ok(l) => {
+            println!("INFO: The server is listening on <{addr}>");
+            l
+        }
+        Err(err) => {
+            panic!("ERROR: Failed binding address because of this error ({err})");
+        }
+    };
+
     for stream in listener.incoming() {
         server.handle_client(stream?)?;
     }
