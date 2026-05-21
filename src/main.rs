@@ -19,7 +19,8 @@ impl Server {
             stream.write("> ".as_bytes())?;
             let n = stream.read(&mut buffer)?;
             let res = str::from_utf8(&buffer).unwrap()[..n].trim();
-            if res == "quit" {
+            if res == "quit" || res == "exit" {
+                println!("INFO: Client disconnected. address: <{}>", &stream.peer_addr().unwrap());
                 break;
             }
 
@@ -35,7 +36,7 @@ impl Server {
 fn main() -> std::io::Result<()> {
     let mut server = Server::new();
     let addr = "127.0.0.1:6969";
-    let listener = match TcpListener::bind(addr) {
+    let listener: TcpListener= match TcpListener::bind(addr) {
         Ok(l) => {
             println!("INFO: The server is listening on <{addr}>");
             l
