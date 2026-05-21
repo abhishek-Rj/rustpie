@@ -4,77 +4,187 @@ pub struct Rufus {
     pub data: HashMap<String, String>
 }
 
-impl Rufus {
-    pub fn plotwhole (&mut self, req: Cow<'_, str>, mut stream: TcpStream) {
-        let req = req.into_owned();
-        let req = req.trim();
-        let req_iterator: Vec<String> = req.split(' ').map(|s| s.to_string()).collect();
+pub enum Command {
+    Set(String, String),
+    Get(String),
+    Delete(String),
+    FlushAll,
+    ShowAll
+}
+
+pub fn parse_command (req: &str) -> Result<Command, String> {
+    let req = req.trim();
+    let parts: Vec<String> = req.split(' ').map(|s| s.to_string()).collect();
+
+    if parts.is_empty() {
+        return Err("Not a valid request".into());
+    }
+
+    match parts[0].as_str() {
+        "SET" => {
+            if parts.len() != 3 {
+                return Err("Not a valid set request".into());
+            }
+            Ok(Command::Set(parts[1].to_string(), parts[2].to_string()))
+        }
+
+        "GET" => {
+            if parts.len() != 2 {
+                return Err("Not a valid get request".into());
+            }
+            Ok(Command::Get(parts[1].to_string()))
+        }
+
+        "DELETE" => {
+            if parts.len() != 2 {
+                return Err("Not a valid delete request".into());
+            }
+            Ok(Command::Delete(parts[1].to_string()))
+        }
+
+        "FLUSHALL" => {
+            if parts.len() != 1 {
+                return Err("Not a valid FlushAll request".into());
+            }
+            Ok(Command::FlushAll)
+        }
         
-        println!("{:?}", req_iterator);
-        if req_iterator[0] == "SET" {
-            if req_iterator.len() != 3 {
-                return;
+        "SHOWALL" => {
+            if parts.len() != 1 {
+                return Err("Not a valid ShowAll request".into());
             }
-            self.data.insert(req_iterator[1].clone(), req_iterator[2].clone());
-            if let Ok(_) = stream.write_all(b"value inserted\n") {
-                println!("Success");
-            } else {
-                println!("Err");
-            }
+            Ok(Command::ShowAll)
         }
 
-        if req_iterator[0] == "GET" {
-            if req_iterator.len() != 2 {
-                return;
+        _ => Err("Not a valie req format".into()),
+    }
+}
+
+impl Rufus {
+
+    pub fn handle_request (&mut self, req: Cow<'_, str>, mut stream: TcpStream) {
+        let req = req.into_owned();
+        match parse_command(&req) {
+            Ok(command) => self.execute(command, stream),
+            Err(err) => {
+                let _ = writeln!(stream, "Error {}", err);
             }
-            let key = req_iterator[1].clone();
-            if let Some(value) = self.data.get(&key) {
-                if let Ok(x) = stream.write_all(value.as_bytes()) {
-                    stream.write_all(b"\n").unwrap();
-                    println!("Success")
-                } else {
-                    println!("Err")
+        }   
+    }
+
+    fn execute (&mut self, command: Command, mut stream: TcpStream) {
+        match command {
+            Command::Set(key, value) => {
+                self.data.insert(key, value);
+                let _ = writeln!(stream, "Success");
+            }
+
+            Command::Get(key) => {
+                match self.data.get(&key) {
+                    Some(value) => {
+                        let _ = writeln!(stream, "{value}");
+                    }
+                    None => {
+                        let _ = writeln!(stream, "Key not found");
+                    }
                 }
-            } else {
-                println!("Coudn't find the data");
             }
-        }
 
-        if req_iterator[0] == "DELETE" {
-            if req_iterator.len() != 2 {
-                return;
-            }
-            let key = req_iterator[1].clone();
-            if let Some(val) = self.data.remove(&key) {
-                if let Ok(x) = stream.write_all(val.as_bytes()) {
-                    stream.write_all(b"\n").unwrap();
+            Command::Delete(key) => {
+                match self.data.remove(&key) {
+                    Some(_) => {
+                        let _ = writeln!(stream, "Delete {key}");
+                    }
+                    None => {
+                        let _ = writeln!(stream, "Key not found");
+                    }
                 }
-                println!("{}", val);
-            } else {
-                println!("didn't delete from db");
             }
-        }
 
-        if req_iterator[0] == "FLUSHALL" {
-            if req_iterator.len() != 1 {
-                return;
+            Command::FlushAll => {
+                self.data.clear();
+                let _ = writeln!(stream, "Success");
             }
-            self.data.clear();           
-            if let Ok(_) = stream.write_all(b"deleted all records") {
-                stream.write_all(b"\n").unwrap();
-                println!("Sucess");
-                println!("{:?}", self.data);
-            }
-        }
 
-        if req_iterator[0] == "SHOWALL" {
-            if req_iterator.len() != 1 {
-                return;
-            }
-            if let Ok(_) = stream.write_all(b"all data") {
-                stream.write_all(b"\n").unwrap();
-                println!("{:?}", self.data);
+            Command::ShowAll => {
+                let _ = writeln!(stream, "{:?}", self.data);
             }
         }
     }
+    
+    //STRAIGHT UP BULLSHIT
+
+    // pub fn plotwhole (&mut self, req: Cow<'_, str>, mut stream: TcpStream) {
+    //     let req = req.into_owned();
+    //     let req = req.trim();
+    //     let req_iterator: Vec<String> = req.split(' ').map(|s| s.to_string()).collect();
+        
+    //     println!("{:?}", req_iterator);
+    //     if req_iterator[0] == "SET" {
+    //         if req_iterator.len() != 3 {
+    //             return;
+    //         }
+    //         self.data.insert(req_iterator[1].clone(), req_iterator[2].clone());
+    //         if let Ok(_) = stream.write_all(b"value inserted\n") {
+    //             println!("Success");
+    //         } else {
+    //             println!("Err");
+    //         }
+    //     }
+
+    //     if req_iterator[0] == "GET" {
+    //         if req_iterator.len() != 2 {
+    //             return;
+    //         }
+    //         let key = req_iterator[1].clone();
+    //         if let Some(value) = self.data.get(&key) {
+    //             if let Ok(x) = stream.write_all(value.as_bytes()) {
+    //                 stream.write_all(b"\n").unwrap();
+    //                 println!("Success")
+    //             } else {
+    //                 println!("Err")
+    //             }
+    //         } else {
+    //             println!("Coudn't find the data");
+    //         }
+    //     }
+
+    //     if req_iterator[0] == "DELETE" {
+    //         if req_iterator.len() != 2 {
+    //             return;
+    //         }
+    //         let key = req_iterator[1].clone();
+    //         if let Some(val) = self.data.remove(&key) {
+    //             if let Ok(x) = stream.write_all(val.as_bytes()) {
+    //                 stream.write_all(b"\n").unwrap();
+    //             }
+    //             println!("{}", val);
+    //         } else {
+    //             println!("didn't delete from db");
+    //         }
+    //     }
+
+    //     if req_iterator[0] == "FLUSHALL" {
+    //         if req_iterator.len() != 1 {
+    //             return;
+    //         }
+    //         self.data.clear();           
+    //         if let Ok(_) = stream.write_all(b"deleted all records") {
+    //             stream.write_all(b"\n").unwrap();
+    //             println!("Sucess");
+    //             println!("{:?}", self.data);
+    //         }
+    //     }
+
+    //     if req_iterator[0] == "SHOWALL" {
+    //         if req_iterator.len() != 1 {
+    //             return;
+    //         }
+    //         if let Ok(_) = stream.write_all(b"all data") {
+    //             stream.write_all(b"\n").unwrap();
+    //             println!("{:?}", self.data);
+    //         }
+    //     }
+    // }
+
 }

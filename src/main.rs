@@ -40,5 +40,5 @@ fn handle_connection(mut stream: TcpStream, rufus: &mut Rufus) {
         }
     }
 
-    rufus.plotwhole(req, stream);
+    rufus.handle_request(req, stream);
 }
