@@ -1,21 +1,65 @@
-use crate::persistent_storage::add_data_toa_file;
+use crate::{persistent_storage::add_data_toa_file};
+use std::fmt;
 use std::{borrow::Cow, collections::HashMap, io::Write, net::TcpStream};
 
 pub struct Rufus {
-    pub data: HashMap<String, String>,
+    pub data: HashMap<String, Value>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Value {
+    String(String),
+    Integer(i64),
+    Float(f64),
+    Boolean(bool)
 }
 
 pub enum Command {
-    Set(String, String),
+    Set(String, String, Value),
     Get(String),
     Delete(String),
     FlushAll,
     ShowAll,
 }
 
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::String(s) => write!(f, "{s}"),
+            Value::Boolean(b) => write!(f, "{b}"),
+            Value::Integer(i) => write!(f, "{i}"),
+            Value::Float(fl) => write!(f, "{fl}"),
+        }
+    }
+}
+
+pub fn provide_value(req: &str, req_value: &str) -> Value {
+    if req == "String" {
+        Value::String(req_value.to_string())
+    } else if req == "Integer" {
+        if let Ok(value) = req_value.parse::<i64>() {
+            Value::Integer(value)
+        } else {
+            Value::String(req_value.to_string())
+        }
+    } else if req == "Float" {
+        if let Ok(value) = req_value.parse::<f64>() {
+            Value::Float(value)
+        } else {
+            Value::String(req_value.to_string())
+        }
+    } else {
+        if let Ok(value) = req_value.parse::<bool>() {
+            Value::Boolean(value)
+        } else {
+            Value::String(req_value.to_string())
+        }
+    }
+} 
+
 pub fn parse_command(req: &str) -> Result<Command, String> {
     let req = req.trim();
-    let parts: Vec<String> = req.split(' ').map(|s| s.to_string()).collect();
+    let parts: Vec<String> = req.split('|').map(|s| s.to_string()).collect();
 
     if parts.is_empty() {
         return Err("Not a valid request".into());
@@ -23,10 +67,13 @@ pub fn parse_command(req: &str) -> Result<Command, String> {
 
     match parts[0].as_str() {
         "SET" => {
-            if parts.len() != 3 {
+            if parts.len() != 4 {
                 return Err("Not a valid set request".into());
             }
-            Ok(Command::Set(parts[1].to_string(), parts[2].to_string()))
+            let data_type = parts[2].as_str();
+            let req_value = parts[3].as_str();
+            let value = provide_value(data_type, req_value);
+            Ok(Command::Set(parts[1].to_string(), data_type.to_string(), value))
         }
 
         "GET" => {
@@ -85,16 +132,18 @@ impl Rufus {
 
     fn execute(&mut self, command: Command, mut stream: Option<TcpStream>, should_persist: bool) {
         match command {
-            Command::Set(key, value) => {
+            Command::Set(key, data_type, value) => {
                 let key = Cow::Borrowed(&key);
                 self.data.insert(key.to_string(), value.clone());
 
                 if should_persist {
                     let mut command = String::from("SET");
-                    command.push(' ');
+                    command.push('|');
                     command.push_str(&key.as_str());
-                    command.push(' ');
-                    command.push_str(&value.as_str());
+                    command.push('|');
+                    command.push_str(data_type.as_str());
+                    command.push('|');
+                    command.push_str(&value.to_string());
                     add_data_toa_file(command);
                 }
 

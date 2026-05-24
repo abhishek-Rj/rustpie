@@ -1,2 +1,3 @@
-SET Key value
-SET clear clean
+SET|key|Integer|56
+SET|key|Integer|56
+SET|partner|String|Ben 10
