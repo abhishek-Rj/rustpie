@@ -1,6 +1,7 @@
 use crate::{persistent_storage::add_data_toa_file};
 use std::fmt;
 use std::{borrow::Cow, collections::HashMap, io::Write, net::TcpStream};
+use crate::parser::parse_command::parse_command;
 
 pub struct Rufus {
     pub data: HashMap<String, Value>,
@@ -30,87 +31,6 @@ impl fmt::Display for Value {
             Value::Integer(i) => write!(f, "{i}"),
             Value::Float(fl) => write!(f, "{fl}"),
         }
-    }
-}
-
-pub fn provide_value(req: &str, req_value: &str) -> Result<Value, String> {
-    if req == "String" {
-        Ok(Value::String(req_value.to_string()))
-    } else if req == "Integer" {
-        if let Ok(value) = req_value.parse::<i64>() {
-            Ok(Value::Integer(value))
-        } else {
-            Ok(Value::String(req_value.to_string()))
-        }
-    } else if req == "Float" {
-        if let Ok(value) = req_value.parse::<f64>() {
-            Ok(Value::Float(value))
-        } else {
-            Ok(Value::String(req_value.to_string()))
-        }
-    } else if req == "Boolean"{
-        if let Ok(value) = req_value.parse::<bool>() {
-            Ok(Value::Boolean(value))
-        } else {
-            Ok(Value::String(req_value.to_string()))
-        }
-    } else {
-        Err("Not a valid request".into())
-    }
-} 
-
-pub fn parse_command(req: &str) -> Result<Command, String> {
-    let req = req.trim();
-    let parts: Vec<String> = req.split('|').map(|s| s.to_string()).collect();
-
-    if parts.is_empty() {
-        return Err("Not a valid request".into());
-    }
-
-    match parts[0].as_str() {
-        "SET" => {
-            if parts.len() != 4 {
-                return Err("Not a valid set request".into());
-            }
-            let data_type = parts[2].as_str();
-            let req_value = parts[3].as_str();
-            let value = provide_value(data_type, req_value);
-            if let Ok(value) = value {
-                Ok(Command::Set(parts[1].to_string(), data_type.to_string(), value))
-            } else {
-                Err("Not a valid data type".into())
-            }
-        }
-
-        "GET" => {
-            if parts.len() != 2 {
-                return Err("Not a valid get request".into());
-            }
-            Ok(Command::Get(parts[1].to_string()))
-        }
-
-        "DELETE" => {
-            if parts.len() != 2 {
-                return Err("Not a valid delete request".into());
-            }
-            Ok(Command::Delete(parts[1].to_string()))
-        }
-
-        "FLUSHALL" => {
-            if parts.len() != 1 {
-                return Err("Not a valid FlushAll request".into());
-            }
-            Ok(Command::FlushAll)
-        }
-
-        "SHOWALL" => {
-            if parts.len() != 1 {
-                return Err("Not a valid ShowAll request".into());
-            }
-            Ok(Command::ShowAll)
-        }
-
-        _ => Err("Not a valie req format".into()),
     }
 }
 
@@ -206,79 +126,4 @@ impl Rufus {
             }
         }
     }
-
-    //STRAIGHT UP BULLSHIT
-
-    // pub fn plotwhole (&mut self, req: Cow<'_, str>, mut stream: TcpStream) {
-    //     let req = req.into_owned();
-    //     let req = req.trim();
-    //     let req_iterator: Vec<String> = req.split(' ').map(|s| s.to_string()).collect();
-
-    //     println!("{:?}", req_iterator);
-    //     if req_iterator[0] == "SET" {
-    //         if req_iterator.len() != 3 {
-    //             return;
-    //         }
-    //         self.data.insert(req_iterator[1].clone(), req_iterator[2].clone());
-    //         if let Ok(_) = stream.write_all(b"value inserted\n") {
-    //             println!("Success");
-    //         } else {
-    //             println!("Err");
-    //         }
-    //     }
-
-    //     if req_iterator[0] == "GET" {
-    //         if req_iterator.len() != 2 {
-    //             return;
-    //         }
-    //         let key = req_iterator[1].clone();
-    //         if let Some(value) = self.data.get(&key) {
-    //             if let Ok(x) = stream.write_all(value.as_bytes()) {
-    //                 stream.write_all(b"\n").unwrap();
-    //                 println!("Success")
-    //             } else {
-    //                 println!("Err")
-    //             }
-    //         } else {
-    //             println!("Coudn't find the data");
-    //         }
-    //     }
-
-    //     if req_iterator[0] == "DELETE" {
-    //         if req_iterator.len() != 2 {
-    //             return;
-    //         }
-    //         let key = req_iterator[1].clone();
-    //         if let Some(val) = self.data.remove(&key) {
-    //             if let Ok(x) = stream.write_all(val.as_bytes()) {
-    //                 stream.write_all(b"\n").unwrap();
-    //             }
-    //             println!("{}", val);
-    //         } else {
-    //             println!("didn't delete from db");
-    //         }
-    //     }
-
-    //     if req_iterator[0] == "FLUSHALL" {
-    //         if req_iterator.len() != 1 {
-    //             return;
-    //         }
-    //         self.data.clear();
-    //         if let Ok(_) = stream.write_all(b"deleted all records") {
-    //             stream.write_all(b"\n").unwrap();
-    //             println!("Sucess");
-    //             println!("{:?}", self.data);
-    //         }
-    //     }
-
-    //     if req_iterator[0] == "SHOWALL" {
-    //         if req_iterator.len() != 1 {
-    //             return;
-    //         }
-    //         if let Ok(_) = stream.write_all(b"all data") {
-    //             stream.write_all(b"\n").unwrap();
-    //             println!("{:?}", self.data);
-    //         }
-    //     }
-    // }
 }
