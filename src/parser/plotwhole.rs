@@ -33,27 +33,29 @@ impl fmt::Display for Value {
     }
 }
 
-pub fn provide_value(req: &str, req_value: &str) -> Value {
+pub fn provide_value(req: &str, req_value: &str) -> Result<Value, String> {
     if req == "String" {
-        Value::String(req_value.to_string())
+        Ok(Value::String(req_value.to_string()))
     } else if req == "Integer" {
         if let Ok(value) = req_value.parse::<i64>() {
-            Value::Integer(value)
+            Ok(Value::Integer(value))
         } else {
-            Value::String(req_value.to_string())
+            Ok(Value::String(req_value.to_string()))
         }
     } else if req == "Float" {
         if let Ok(value) = req_value.parse::<f64>() {
-            Value::Float(value)
+            Ok(Value::Float(value))
         } else {
-            Value::String(req_value.to_string())
+            Ok(Value::String(req_value.to_string()))
+        }
+    } else if req == "Boolean"{
+        if let Ok(value) = req_value.parse::<bool>() {
+            Ok(Value::Boolean(value))
+        } else {
+            Ok(Value::String(req_value.to_string()))
         }
     } else {
-        if let Ok(value) = req_value.parse::<bool>() {
-            Value::Boolean(value)
-        } else {
-            Value::String(req_value.to_string())
-        }
+        Err("Not a valid request".into())
     }
 } 
 
@@ -73,7 +75,11 @@ pub fn parse_command(req: &str) -> Result<Command, String> {
             let data_type = parts[2].as_str();
             let req_value = parts[3].as_str();
             let value = provide_value(data_type, req_value);
-            Ok(Command::Set(parts[1].to_string(), data_type.to_string(), value))
+            if let Ok(value) = value {
+                Ok(Command::Set(parts[1].to_string(), data_type.to_string(), value))
+            } else {
+                Err("Not a valid data type".into())
+            }
         }
 
         "GET" => {

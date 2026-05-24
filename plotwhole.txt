@@ -1,3 +1,5 @@
 SET|key|Integer|56
 SET|key|Integer|56
 SET|partner|String|Ben 10
+SET|Key|Float|7.8
+SET|kl|umn|uik
