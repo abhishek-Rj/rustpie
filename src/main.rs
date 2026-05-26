@@ -1,5 +1,6 @@
 mod parser;
 mod persistent_storage;
+mod buffer;
 
 use parser::plotwhole::Rufus;
 use std::{
