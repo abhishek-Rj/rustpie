@@ -1,3 +1,0 @@
-SET count 1
-GET count
-FLUSH
