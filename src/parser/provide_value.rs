@@ -15,7 +15,7 @@ pub fn provide_value(req: &str, req_value: &str) -> Result<Value, String> {
         } else {
             Ok(Value::String(req_value.to_string()))
         }
-    } else if req == "Boolean"{
+    } else if req == "Boolean" {
         if let Ok(value) = req_value.parse::<bool>() {
             Ok(Value::Boolean(value))
         } else {
@@ -24,5 +24,4 @@ pub fn provide_value(req: &str, req_value: &str) -> Result<Value, String> {
     } else {
         Err("Not a valid request".into())
     }
-} 
-
+}

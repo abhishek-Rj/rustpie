@@ -1,7 +1,6 @@
+mod net;
 mod parser;
 mod persistent_storage;
-mod buffer;
-mod net;
 
 use parser::plotwhole::Rufus;
 use std::{
