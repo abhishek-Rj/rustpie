@@ -1,7 +1,7 @@
-use crate::{persistent_storage::add_data_toa_file};
+use crate::parser::parse_command::parse_command;
+use crate::persistent_storage::add_data_toa_file;
 use std::fmt;
 use std::{borrow::Cow, collections::HashMap, io::Write, net::TcpStream};
-use crate::parser::parse_command::parse_command;
 
 pub struct Rufus {
     pub data: HashMap<String, Value>,
@@ -12,7 +12,7 @@ pub enum Value {
     String(String),
     Integer(i64),
     Float(f64),
-    Boolean(bool)
+    Boolean(bool),
 }
 
 pub enum Command {

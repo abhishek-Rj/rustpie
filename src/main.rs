@@ -1,3 +1,4 @@
+mod net;
 mod parser;
 mod persistent_storage;
 
@@ -6,9 +7,11 @@ use std::{
     borrow::Cow,
     collections::HashMap,
     fs::OpenOptions,
-    io::{BufRead, BufReader, Read},
+    io::{BufRead, BufReader},
     net::{TcpListener, TcpStream},
 };
+
+use crate::net::{buffer::{self, Buffer}, socket::Socket};
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
@@ -45,31 +48,27 @@ fn main() {
     }
 }
 
-fn handle_connection(mut stream: TcpStream, rufus: &mut Rufus) {
-    let mut buffer = [0u8; 6];
-    let mut actual_data: Vec<_> = vec![];
-    let mut flat: Vec<u8> = vec![];
-    let mut req: Cow<'_, str> = Cow::Owned("".to_string());
+fn handle_connection(stream: TcpStream, rufus: &mut Rufus) {
+    let mut chunk = [0u8; 6];
+    let socket = Socket::new(&stream);
+    let mut buffer = Buffer::new();
 
+    
     loop {
-        let buff_read = stream.read(&mut buffer).unwrap();
-
-        if buff_read == 0 {
+        let bytes_count = socket.read_into(&mut chunk).unwrap();
+        if bytes_count == 0 {
             break;
         }
-
-        actual_data.push(buffer[..buff_read].to_vec());
-        // println!("chunks recieved {:?}", &buffer[..buff_read]);
-        // println!("{}", String::from_utf8_lossy(&buffer[..buff_read]));
-
-        flat = actual_data.iter().flatten().cloned().collect();
-        req = String::from_utf8_lossy(&flat);
-
-        if req.ends_with("\r\n") {
-            println!("Full Request: {}", req);
+        
+        buffer.write_bytes(&chunk[..bytes_count]);
+        let msg = String::from_utf8_lossy(&buffer.data);
+        println!("{msg}");
+        
+        if buffer.readable_slice().ends_with(b"\r\n") {
+            println!("size of buffer right now: {}", buffer.data.len());
             break;
         }
     }
-
-    rufus.handle_request(req, Some(stream));
+    
+    rufus.handle_request(String::from_utf8_lossy(&buffer.data), Some(stream));
 }

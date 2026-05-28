@@ -17,7 +17,11 @@ pub fn parse_command(req: &str) -> Result<Command, String> {
             let req_value = parts[3].as_str();
             let value = provide_value(data_type, req_value);
             if let Ok(value) = value {
-                Ok(Command::Set(parts[1].to_string(), data_type.to_string(), value))
+                Ok(Command::Set(
+                    parts[1].to_string(),
+                    data_type.to_string(),
+                    value,
+                ))
             } else {
                 Err("Not a valid data type".into())
             }
@@ -54,4 +58,3 @@ pub fn parse_command(req: &str) -> Result<Command, String> {
         _ => Err("Not a valie req format".into()),
     }
 }
-
